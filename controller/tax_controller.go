@@ -18,8 +18,11 @@ func TaxCalculations(c echo.Context) error {
     // Calculate tax-able income
     taxableIncome := calculateTaxableIncome(req.TotalIncome, req.Allowances)
 
-    // Calculate tax
-    tax := calculateTax(taxableIncome)
+    // Calculate net tax before withholding
+    netTax := calculateTax(taxableIncome)
+
+    // Apply tax withholding
+    tax := netTax - req.WHT
 
     // Prepare response
     res := model.Response{
@@ -40,7 +43,6 @@ func calculateTaxableIncome(totalIncome float64, allowances []model.Allowance) f
 }
 
 func calculateTax(taxableIncome float64) float64 {
-
     if taxableIncome <= 150000 {
         return 0
     } else if taxableIncome <= 500000 {
@@ -50,7 +52,6 @@ func calculateTax(taxableIncome float64) float64 {
     } else {
         return 0
     }
-	
 }
 
 func handleError(c echo.Context, statusCode int, message string) error {
@@ -60,4 +61,3 @@ func handleError(c echo.Context, statusCode int, message string) error {
     }
     return c.JSON(statusCode, res)
 }
-
