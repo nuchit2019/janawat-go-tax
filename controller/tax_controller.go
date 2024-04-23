@@ -9,32 +9,55 @@ import (
 )
 
 func TaxCalculations(c echo.Context) error {
+    // Bind request data to struct
+    req := model.RequestModel{}
+    if err := c.Bind(&req); err != nil {
+        return handleError(c, http.StatusNotFound, "Failed to retrieve products...Err:"+err.Error())
+    }
 
-	var req model.RequestModel
+    // Calculate tax-able income
+    taxableIncome := calculateTaxableIncome(req.TotalIncome, req.Allowances)
 
-	if err := c.Bind(&req); err != nil {
-		res := model.Response{
-			Status:  http.StatusNotFound,
-			Message: "Failed to retrieve products...Err:" + err.Error(),
-		}
-		return c.JSON(http.StatusNotFound, res)
-	}
+    // Calculate tax
+    tax := calculateTax(taxableIncome)
 
-	totalIncome := req.TotalIncome
-	wht := req.WHT
-	allowances := req.Allowances
+    // Prepare response
+    res := model.Response{
+        Status:  http.StatusOK,
+        Message: "successfully",
+        Data:    map[string]interface{}{"tax": tax},
+    }
 
-	// Calculate Tax
-	tax := totalIncome * wht
-	for _, allallowances := range allowances {
-		tax += allallowances.Amount
-	}
-
-	res := model.Response{
-		Status:  http.StatusOK,
-		Message: "successfully",
-		Data:    map[string]interface{}{"tax": tax},
-	}
-
-	return c.JSON(http.StatusOK, res)
+    return c.JSON(http.StatusOK, res)
 }
+
+func calculateTaxableIncome(totalIncome float64, allowances []model.Allowance) float64 {
+    incomeAfterAllowance := totalIncome
+    for _, allowance := range allowances {
+        incomeAfterAllowance -= allowance.Amount
+    }
+    return incomeAfterAllowance
+}
+
+func calculateTax(taxableIncome float64) float64 {
+
+    if taxableIncome <= 150000 {
+        return 0
+    } else if taxableIncome <= 500000 {
+        return 29000
+    } else if taxableIncome <= 1000000 {
+        return 0
+    } else {
+        return 0
+    }
+	
+}
+
+func handleError(c echo.Context, statusCode int, message string) error {
+    res := model.Response{
+        Status:  statusCode,
+        Message: message,
+    }
+    return c.JSON(statusCode, res)
+}
+
